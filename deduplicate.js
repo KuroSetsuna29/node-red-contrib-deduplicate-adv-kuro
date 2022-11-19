@@ -6,6 +6,7 @@ module.exports = function (RED) {
         this.keyproperty = config.keyproperty;
         this.storage = (config.noderole != 'standalone' ? this.context().global : this.context())
         this.registry = "DeDuplicate_" + (config.registryclass||'')
+        this.storename = config.storename;
 
         var node = this;
 
@@ -16,7 +17,7 @@ module.exports = function (RED) {
 		function cacheClean() {
 			var data_changed=false;
 			var i;
-			var known_entries = node.storage.get(node.registry);
+			var known_entries = node.storage.get(node.registry,node.storename);
 			
 			Object.keys(known_entries).forEach(key => {
 				//console.log(key, known_entries[key])
@@ -34,26 +35,26 @@ module.exports = function (RED) {
 				}
 			});
 			
-			if (data_changed) node.storage.set(node.registry,known_entries)
+			if (data_changed) node.storage.set(node.registry,known_entries,node.storename)
 			
 		}
         function cacheContains(topic,key,expiry_lifetime) {
             var i;
             var known_entries;
 
-            known_entries = node.storage.get(node.registry+'["'+topic+'"]')
+            known_entries = node.storage.get(node.registry+'["'+topic+'"]',node.storename)
 
             for (i = 0; i < known_entries.length; i += 1) {
                 if (known_entries[i].key === key) {
                     if (!expired(known_entries[i])) {							
 						if (config.expirypolicy=='extend') {
 							known_entries[i].expiry=new Date().getTime() + expiry_lifetime * 1000;
-							node.storage.set(node.registry+'["'+topic+'"]',known_entries)							
+							node.storage.set(node.registry+'["'+topic+'"]',known_entries,node.storename)
 						}
                         return true;
                     }
                     known_entries.splice(i, 1);
-                    node.storage.set(node.registry+'["'+topic+'"]',known_entries)
+                    node.storage.set(node.registry+'["'+topic+'"]',known_entries,node.storename)
                 }
             }
             return false;
@@ -66,12 +67,12 @@ module.exports = function (RED) {
             var topic = (msg.topic || "default_topic")
 			var expiry_lifetime = (isNaN(parseInt(node.expiry)) ? null : parseInt(node.expiry))  || (isNaN(parseInt(msg[node.expiry])) ? null : parseInt(msg[node.expiry])) || 5
 
-            if (node.storage.get(node.registry) === undefined) {
-                node.storage.set(node.registry,{})
+            if (node.storage.get(node.registry,node.storename) === undefined) {
+                node.storage.set(node.registry,{},node.storename)
             }
 
-            if (node.storage.get(node.registry+'["'+topic+'"]') === undefined) {
-                node.storage.set(node.registry+'["'+topic+'"]',[])
+            if (node.storage.get(node.registry+'["'+topic+'"]',node.storename) === undefined) {
+                node.storage.set(node.registry+'["'+topic+'"]',[],node.storename)
             }
 
 
@@ -80,11 +81,11 @@ module.exports = function (RED) {
                 return;
             }
 
-            var known_values  = node.storage.get(node.registry+'["'+topic+'"]')
+            var known_values  = node.storage.get(node.registry+'["'+topic+'"]',node.storename)
 
             if (config.noderole != "deduplicate") {
                 known_values.push({expiry: new Date().getTime() + expiry_lifetime * 1000, key: JSON.stringify(key)});
-                node.storage.set(node.registry+'["'+topic+'"]',known_values)
+                node.storage.set(node.registry+'["'+topic+'"]',known_values,node.storename)
             }
 			
 			

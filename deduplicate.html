@@ -8,13 +8,22 @@
 			expirypolicy: {value:"keep"},
             registryclass: {value:""},
             noderole: {value:"standalone"},
-            expiry: {value: "5"}
+            expiry: {value: "5"},
+            storename: {value: RED.settings.context?.default || 'default'}
         },
         inputs: 1,
         outputs: 2,
         icon: "switch.png",
         label: function() {
             return this.name || "Deduplicate";
+        },
+        oneditprepare: function() {
+            var node = this
+            RED.settings.context.stores.forEach(add)    // list context stores
+            function add(item){
+                $('#node-input-storename').append(`<option value="${item}">${item}</option>`)
+            }
+            $('#node-input-storename').val(node.storename);
         }
     });
 </script>
@@ -39,6 +48,12 @@
     <div class="form-row">
         <label for="node-input-registryclass"><i class="icon-tag"></i> Registry Class name</label>
         <input type="text" id="node-input-registryclass" placeholder="Registry class (optional)">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-storename"><i class="icon-tag"></i> Context Storage</label>
+        <select type="text" id="node-input-storename" style="width:20%"> </select>
+        <i class="fa fa-database"></i>
     </div>
 
     <div class="form-row">
